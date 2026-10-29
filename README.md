@@ -51,6 +51,19 @@ Catalog changes reach the live feed after the next successful release on `main`.
 Historical upstream download URLs, checksums and compatibility metadata remain
 unchanged because they refer to the original upstream binaries.
 
+## Posters and box art
+
+**Scene / Movie / JAV Primary Artwork** defaults to **Prefer poster / box art**.
+Library artwork and Identify previews prefer the API's full-size poster, then its
+large poster, then its standalone poster URL. A background is used only when no
+poster is supplied. Backgrounds remain available separately as backdrops.
+The **Prefer background / screenshot** option explicitly reverses that preference.
+The plugin cannot supply box art that ThePornDB does not have for the matched item.
+
+After updating, select the poster option and refresh existing items with
+**Replace existing images** enabled to replace previously downloaded screenshots.
+If the artwork belongs to a different title, correct the match using **Identify**.
+
 ## Enhanced matching and automatic filenames
 
 Enable **Use enhanced filename matching** in the plugin settings to use matching

@@ -155,11 +155,12 @@
                         </label>
                     </div>
                     <div class="selectContainer">
-                        <label class="selectLabel" for="ScenesImage">Scenes Image Option</label>
+                        <label class="selectLabel" for="ScenesImage">Scene / Movie / JAV Primary Artwork</label>
                         <select is="emby-select" id="ScenesImage" name="ScenesImage" class="emby-select-withcolor emby-select">
-                            <option value="Poster">Poster</option>
-                            <option value="Background">Background</option>
+                            <option value="Poster">Prefer poster / box art</option>
+                            <option value="Background">Prefer background / screenshot</option>
                         </select>
+                        <div class="fieldDescription">Uses full-size artwork when available. Falls back to the other artwork type only if the preferred type is missing.</div>
                     </div>
                     <div class="checkboxContainer checkboxContainer-withDescripton">
                         <label class="emby-checkbox-label">
