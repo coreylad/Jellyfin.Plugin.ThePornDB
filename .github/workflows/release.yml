@@ -1,105 +1,54 @@
-name: Build
+name: Release
+
 on:
-  push:
-    branches:
-      - main
-    tags: ["v*"]
-    paths:
-      - Jellyfin.Plugin.ThePornDB/**
-      - .github/**
-  pull_request:
-    branches: 
-      -main
+  workflow_call:
+    inputs:
+      version:
+        description: Four-part plugin version calculated by the Build workflow
+        required: true
+        type: string
+
+permissions:
+  contents: write
 
 jobs:
-  debug-jellyfin:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v2
-
-      - name: Build app for debug
-        run: MSBuild -t:Restore,Build -p:RestorePackagesConfig=true -property:Configuration=Debug
-  debug-emby:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v2
-
-      - name: Build app for release
-        run: MSBuild -t:Restore,Build -p:RestorePackagesConfig=true -property:Configuration=Debug.Emby
-  jellyfin:
-    runs-on: windows-latest
-    needs: [debug-jellyfin]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v2
-
-      - name: Build app for release
-        run: MSBuild -t:Restore,Build -p:RestorePackagesConfig=true -property:Configuration=Release
-
-      - name: Rename Files
-        run: ren Jellyfin.Plugin.ThePornDB/bin/Release/net10.0/ThePornDB.dll Jellyfin.Plugin.ThePornDB.dll && ren Jellyfin.Plugin.ThePornDB/bin/Release/net10.0/ThePornDB.pdb Jellyfin.Plugin.ThePornDB.pdb
-
-      - uses: vimtor/action-zip@v1.2
-        with:
-          files: Jellyfin.Plugin.ThePornDB/bin/Release/net10.0/Jellyfin.Plugin.ThePornDB.pdb Jellyfin.Plugin.ThePornDB/bin/Release/net10.0/Jellyfin.Plugin.ThePornDB.dll
-          dest: Jellyfin.Plugin.ThePornDB.zip
-
-      - uses: actions/upload-artifact@v4
-        with:
-          if-no-files-found: error
-          name: Jellyfin
-          retention-days: 90
-          path: Jellyfin.Plugin.ThePornDB.zip
-  emby:
-    runs-on: windows-latest
-    needs: [debug-emby]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v2
-
-      - name: Build app for release
-        run: MSBuild -t:Restore,Build -p:RestorePackagesConfig=true -property:Configuration=Release.Emby
-
-      - name: Rename Files
-        run: ren Jellyfin.Plugin.ThePornDB/bin/Release.Emby/netstandard2.1/ThePornDB.dll ./Emby.Plugins.ThePornDB.dll && ren Jellyfin.Plugin.ThePornDB/bin/Release.Emby/netstandard2.1/ThePornDB.pdb ./Emby.Plugins.ThePornDB.pdb
-
-      - uses: vimtor/action-zip@v1.2
-        with:
-          files: Jellyfin.Plugin.ThePornDB/bin/Release.Emby/netstandard2.1/Emby.Plugins.ThePornDB.pdb Jellyfin.Plugin.ThePornDB/bin/Release.Emby/netstandard2.1/Emby.Plugins.ThePornDB.dll
-          dest: Emby.Plugins.ThePornDB.zip
-
-      - uses: actions/upload-artifact@v4
-        with:
-          if-no-files-found: error
-          name: Emby
-          retention-days: 90
-          path: Emby.Plugins.ThePornDB.zip
-  deploy:
+  publish:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main'}}
-    needs: [jellyfin, emby]
     steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-
-      - uses: marvinpinto/action-automatic-releases@latest
+      - uses: actions/checkout@v7.0.1
         with:
-          repo_token: "${{ secrets.GITHUB_TOKEN }}"
-          automatic_release_tag: "latest"
-          prerelease: true
-          title: "Development Build"
-          files: |
-            **/Jellyfin.Plugin.ThePornDB.zip
-            **/Emby.Plugins.ThePornDB.zip
+          repository: ${{ github.repository }}
+      - uses: actions/setup-python@v7.1.0
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          pattern: '*.Plugin*'
+          merge-multiple: true
+          path: artifacts
+      - name: Generate Jellyfin repository manifest
+        env:
+          VERSION: ${{ inputs.version }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          python scripts/release.py manifest \
+            --version "$VERSION" \
+            --repository "$REPOSITORY" \
+            --archive artifacts/Jellyfin.Plugin.ThePornDB.zip \
+            --output artifacts/manifest.json
+          test -s artifacts/Emby.Plugins.ThePornDB.zip
+      - name: Publish versioned release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          tag="v$VERSION"
+          if gh release view "$tag" > /dev/null 2>&1; then
+            gh release upload "$tag" artifacts/*.zip artifacts/manifest.json --clobber
+          else
+            gh release create "$tag" artifacts/*.zip artifacts/manifest.json \
+              --target "$COMMIT" --title "ThePornDB $VERSION" --generate-notes --latest
+          fi

@@ -10,10 +10,39 @@ This metadata provider helps fill Jellyfin/Emby with information for your adult 
 
 ## Install
 - Repository (Jellyfin only):
-  - Add to the list this URL `https://raw.githubusercontent.com/coreylad/Jellyfin.Plugin.ThePornDB/main/manifest.json`
-- Manual (Jellyfin):
-  - Download the **Jellyfin** artifact from the latest successful [Build workflow run on `main`](https://github.com/coreylad/Jellyfin.Plugin.ThePornDB/actions/workflows/release.yml).
-  - Extract the artifact and install the included `Jellyfin.Plugin.ThePornDB.zip` using the [Jellyfin plugin instructions](https://jellyfin.org/docs/general/server/plugins/index.html).
+  - Add to the list this URL `https://github.com/coreylad/Jellyfin.Plugin.ThePornDB/releases/latest/download/manifest.json`
+- Manual:
+  - Download the archive from the [latest release](https://github.com/coreylad/Jellyfin.Plugin.ThePornDB/releases/latest)
+  - Follow the [Jellyfin plugin instructions](https://jellyfin.org/docs/general/server/plugins/index.html)
+
+## Builds and automatic revisions
+
+Pull requests to `main`, pushes to `main`, and manual **Build** workflow runs
+compile Debug and Release configurations for both Jellyfin and Emby using .NET 10.
+Checkouts and release publishing use the triggering repository
+(`coreylad/Jellyfin.Plugin.ThePornDB`), not the upstream repository.
+Plugin regression tests and release-metadata tests must pass before publishing.
+Release ZIPs and test results are downloadable from each workflow run.
+
+Versions use `<VersionPrefix>.<workflow run number>` (for example `1.6.1.42`),
+with the prefix defined in `ThePornDB.csproj`. Assembly and file versions use the
+same value. Local builds default to revision `0`; override it with
+`dotnet build Jellyfin.Plugin.ThePornDB/ThePornDB.csproj -p:RevisionNumber=42`.
+Workflow reruns retain the original revision. The run number must be at most
+65534, the .NET assembly-version limit; the version step fails explicitly beyond
+that limit. No version-bump commits or personal access token are needed.
+
+After all checks pass on `main`, the release workflow creates a versioned tag and
+GitHub release with Jellyfin/Emby ZIPs and a generated Jellyfin repository manifest.
+The manifest includes the ZIP checksum, matching version, current Jellyfin ABI,
+and release download URL. Releases require the workflow's `contents: write`
+permission. PRs only build and test; they never publish.
+
+Use the **release-hosted manifest URL above** for automatic Jellyfin updates.
+The checked-in `manifest.json` is historical input, not the live update feed.
+The new feed becomes available after the first successful release on `main`.
+Historical upstream entries remain unchanged because their URLs and checksums
+refer to the original upstream binaries.
 
 ## Enhanced matching and automatic filenames
 
