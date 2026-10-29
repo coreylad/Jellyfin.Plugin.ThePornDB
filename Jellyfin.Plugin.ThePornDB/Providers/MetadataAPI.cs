@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,7 +29,7 @@ namespace ThePornDB.Providers
     {
         private static readonly Regex RegExImageSize = new Regex(@"(?<Width>[0-9]{1,})x(?<Height>[0-9]{1,})", RegexOptions.Compiled);
 
-        public static async Task<JObject> GetDataFromAPI(string url, CancellationToken cancellationToken)
+        public static async Task<JObject> GetDataFromAPI(string url, CancellationToken cancellationToken, bool failOnError = false)
         {
             JObject json = null;
             var headers = new Dictionary<string, string>();
@@ -40,12 +41,22 @@ namespace ThePornDB.Providers
             }
 
             var http = await HTTP.Request(url, cancellationToken, headers).ConfigureAwait(false);
+            if (failOnError && !http.IsOK)
+            {
+                throw new HttpRequestException("ThePornDB search request failed; automatic matching was aborted.");
+            }
+
             try
             {
                 json = JObject.Parse(http.Content);
             }
             catch (Exception)
             {
+                if (failOnError)
+                {
+                    throw;
+                }
+
                 var message = "Unknown error";
                 if (json != null && json.ContainsKey("message"))
                 {
@@ -67,9 +78,14 @@ namespace ThePornDB.Providers
             }
 
             url = string.Format(url, Uri.EscapeDataString(searchTitle), Uri.EscapeDataString(oshash), Uri.EscapeDataString(year.HasValue ? year.Value.ToString() : string.Empty));
-            var http = await GetDataFromAPI(url, cancellationToken).ConfigureAwait(false);
+            var http = await GetDataFromAPI(url, cancellationToken, Plugin.Instance.Configuration.UseEnhancedMatching).ConfigureAwait(false);
             if (http == null || !http.ContainsKey("data") || http["data"].Type != JTokenType.Array)
             {
+                if (Plugin.Instance.Configuration.UseEnhancedMatching)
+                {
+                    throw new JsonException("Invalid ThePornDB search response; automatic matching was aborted.");
+                }
+
                 return result;
             }
 
@@ -78,8 +94,15 @@ namespace ThePornDB.Providers
 
             foreach (var searchResult in searchResults)
             {
-                result.Add(new RemoteSearchResult
+                if (string.IsNullOrWhiteSpace(searchResult.UUID) || string.IsNullOrWhiteSpace(searchResult.Title))
                 {
+                    Logger.Warning("Ignoring a ThePornDB search result without an ID or title.");
+                    continue;
+                }
+
+                result.Add(new MatchedSearchResult
+                {
+                    Scene = searchResult,
                     ProviderIds = { { Plugin.Instance.Name, prefixID + searchResult.UUID } },
                     Name = searchResult.Title,
                     ImageUrl = searchResult.Poster,

@@ -32,6 +32,30 @@
                             <option value="DistanceByTitle">DistanceByTitle</option>
                         </select>
                     </div>
+                    <div class="checkboxContainer checkboxContainer-withDescripton">
+                        <label class="emby-checkbox-label">
+                            <input id="UseEnhancedMatching" name="UseEnhancedMatching" type="checkbox" is="emby-checkbox" />
+                            <span>Use enhanced filename matching</span>
+                        </label>
+                        <div class="fieldDescription">Namer-inspired studio/date and title/performer matching. Ranks unique results by confidence and leaves ambiguous matches for manual Identify. Overrides Order Style.</div>
+                    </div>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="MinimumMatchScore">Minimum automatic match score (50-100)</label>
+                        <input id="MinimumMatchScore" name="MinimumMatchScore" type="number" is="emby-input" min="50" max="100" required />
+                        <div class="fieldDescription">Default: 85. The best match must also lead the next candidate by at least 10 points.</div>
+                    </div>
+                    <div class="checkboxContainer checkboxContainer-withDescripton">
+                        <label class="emby-checkbox-label">
+                            <input id="EnableAutoRename" name="EnableAutoRename" type="checkbox" is="emby-checkbox" />
+                            <span>Automatically rename confidently matched video files</span>
+                        </label>
+                        <div class="fieldDescription">Requires enhanced matching. Changes actual files after Jellyfin library scans and hourly (or run Rename matched videos). Back up your library first. Only standalone local videos are supported; sidecars, alternate versions, stacked files and symlinks are skipped. Existing files are never overwritten.</div>
+                    </div>
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="FileNameFormat">Filename format (without extension)</label>
+                        <input id="FileNameFormat" name="FileNameFormat" type="text" is="emby-input" required />
+                        <div class="fieldDescription">Use {studio}, {release_date}, {title}, {actors}. A TPDB ID marker and the original extension are always appended. Files stay in their current directory.</div>
+                    </div>
                     <div class="selectContainer">
                         <label class="selectLabel" for="TagStyle">Tag Style</label>
                         <select is="emby-select" id="TagStyle" name="TagStyle" class="emby-select-withcolor emby-select">
@@ -188,6 +212,10 @@
                     $('#MetadataAPIToken').val(config.MetadataAPIToken).change();
                     $('#UseFilePath').prop('checked', config.UseFilePath);
                     $('#UseOSHash').prop('checked', config.UseOSHash);
+                    $('#UseEnhancedMatching').prop('checked', config.UseEnhancedMatching);
+                    $('#MinimumMatchScore').val(config.MinimumMatchScore).change();
+                    $('#EnableAutoRename').prop('checked', config.EnableAutoRename);
+                    $('#FileNameFormat').val(config.FileNameFormat).change();
                     $('#OrderStyle').val(config.OrderStyle).change();
                     $('#TagStyle').val(config.TagStyle).change();
                     $('#AddCollectionOnSite').prop('checked', config.AddCollectionOnSite);
@@ -221,6 +249,10 @@
                     config.MetadataAPIToken = $('#MetadataAPIToken').val();
                     config.UseFilePath = $('#UseFilePath').prop('checked');
                     config.UseOSHash = $('#UseOSHash').prop('checked');
+                    config.UseEnhancedMatching = $('#UseEnhancedMatching').prop('checked');
+                    config.MinimumMatchScore = Number($('#MinimumMatchScore').val());
+                    config.EnableAutoRename = $('#EnableAutoRename').prop('checked');
+                    config.FileNameFormat = $('#FileNameFormat').val();
                     config.OrderStyle = $('#OrderStyle').val();
                     config.TagStyle = $('#TagStyle').val();
                     config.AddCollectionOnSite = $('#AddCollectionOnSite').prop('checked');
