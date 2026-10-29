@@ -26,6 +26,18 @@ jobs:
           pattern: '*.Plugin*'
           merge-multiple: true
           path: artifacts
+      - name: Generate release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          VERSION: ${{ inputs.version }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          gh api --method POST "repos/$REPOSITORY/releases/generate-notes" \
+            -f tag_name="v$VERSION" -f target_commitish="$COMMIT" \
+            --jq .body > artifacts/release-notes.md
+          test -s artifacts/release-notes.md
       - name: Generate Jellyfin repository manifest
         env:
           VERSION: ${{ inputs.version }}
@@ -35,6 +47,7 @@ jobs:
             --version "$VERSION" \
             --repository "$REPOSITORY" \
             --archive artifacts/Jellyfin.Plugin.ThePornDB.zip \
+            --changelog-file artifacts/release-notes.md \
             --output artifacts/manifest.json
           test -s artifacts/Emby.Plugins.ThePornDB.zip
       - name: Publish versioned release
@@ -50,5 +63,6 @@ jobs:
             gh release upload "$tag" artifacts/*.zip artifacts/manifest.json --clobber
           else
             gh release create "$tag" artifacts/*.zip artifacts/manifest.json \
-              --target "$COMMIT" --title "ThePornDB $VERSION" --generate-notes --latest
+              --target "$COMMIT" --title "ThePornDB $VERSION" \
+              --notes-file artifacts/release-notes.md --latest
           fi

@@ -4,7 +4,7 @@ This metadata provider helps fill Jellyfin/Emby with information for your adult 
 
 [![GPL 2.0 License](https://img.shields.io/github/license/coreylad/Jellyfin.Plugin.ThePornDB)](./LICENSE)
 [![Current Release](https://img.shields.io/github/release/coreylad/Jellyfin.Plugin.ThePornDB)](https://github.com/coreylad/Jellyfin.Plugin.ThePornDB/releases/latest)
-[![Build status](https://img.shields.io/github/actions/workflow/status/coreylad/Jellyfin.Plugin.ThePornDB/release.yml)](https://github.com/coreylad/Jellyfin.Plugin.ThePornDB/actions/workflows/release.yml)
+[![Build and release status](https://img.shields.io/github/actions/workflow/status/coreylad/Jellyfin.Plugin.ThePornDB/build.yml?branch=main)](https://github.com/coreylad/Jellyfin.Plugin.ThePornDB/actions/workflows/build.yml)
 
 ------------
 
@@ -37,12 +37,19 @@ GitHub release with Jellyfin/Emby ZIPs and a generated Jellyfin repository manif
 The manifest includes the ZIP checksum, matching version, current Jellyfin ABI,
 and release download URL. Releases require the workflow's `contents: write`
 permission. PRs only build and test; they never publish.
+The plugin catalog includes setup, repository and support links. Each new manifest
+entry includes the GitHub-generated release notes, a version-specific release link,
+the required Jellyfin version and a reminder to restart after updating. Release
+notes are generated once and used for both the manifest and the new GitHub release.
+The **Build** workflow includes the `release / publish` job by calling the reusable
+`release.yml` workflow; releases do not have a separate workflow run or status badge.
 
 Use the **release-hosted manifest URL above** for automatic Jellyfin updates.
-The checked-in `manifest.json` is historical input, not the live update feed.
-The new feed becomes available after the first successful release on `main`.
-Historical upstream entries remain unchanged because their URLs and checksums
-refer to the original upstream binaries.
+The checked-in `manifest.json` is a release snapshot and historical template input,
+not the live update feed.
+Catalog changes reach the live feed after the next successful release on `main`.
+Historical upstream download URLs, checksums and compatibility metadata remain
+unchanged because they refer to the original upstream binaries.
 
 ## Enhanced matching and automatic filenames
 
