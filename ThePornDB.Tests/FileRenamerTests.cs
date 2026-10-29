@@ -74,6 +74,19 @@ namespace ThePornDB.Tests
             Assert.Equal("existing", File.ReadAllText(destination));
         }
 
+        [Theory]
+        [InlineData("friendly.mkv")]
+        [InlineData("friendly.nfo")]
+        [InlineData("friendly.en.srt")]
+        public async Task RefusesDestinationWithCompanions(string companion)
+        {
+            var source = this.CreateFile("original.mp4", "original");
+            this.CreateFile(companion, "companion");
+            await Assert.ThrowsAsync<IOException>(() => FileRenamer.Rename(source, "friendly.mp4", _ => throw new Exception("Must not persist")));
+            Assert.Equal("original", File.ReadAllText(source));
+            Assert.Equal("companion", File.ReadAllText(Path.Combine(this.directory, companion)));
+        }
+
         [Fact]
         public async Task RollsBackMoveWhenLibraryUpdateFails()
         {
