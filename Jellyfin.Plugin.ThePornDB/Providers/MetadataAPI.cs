@@ -105,7 +105,7 @@ namespace ThePornDB.Providers
                     Scene = searchResult,
                     ProviderIds = { { Plugin.Instance.Name, prefixID + searchResult.UUID } },
                     Name = searchResult.Title,
-                    ImageUrl = searchResult.Poster,
+                    ImageUrl = GetScenePrimaryImage(searchResult, Plugin.Instance.Configuration.ScenesImage),
                     PremiereDate = searchResult.Date,
                 });
             }
@@ -332,32 +332,38 @@ namespace ThePornDB.Providers
             var data = http["data"].ToString();
             var sceneData = JsonConvert.DeserializeObject<Scene>(data);
 
+            return GetSceneImages(sceneData, Plugin.Instance.Configuration.ScenesImage);
+        }
+
+        public static string GetScenePrimaryImage(Scene scene, ScenesImageStyle style)
+        {
+            var poster = FirstImageUrl(scene.Posters.Full, scene.Posters.Large, scene.Poster);
+            var background = FirstImageUrl(scene.Background.Full, scene.Background.Large);
+
+            return style == ScenesImageStyle.Background
+                ? FirstImageUrl(background, poster)
+                : FirstImageUrl(poster, background);
+        }
+
+        public static List<RemoteImageInfo> GetSceneImages(Scene sceneData, ScenesImageStyle style)
+        {
+            var result = new List<RemoteImageInfo>();
             var images = new List<(ImageType Type, string Url)>()
             {
-                (ImageType.Backdrop, sceneData.Background.Large),
-                (ImageType.Backdrop, sceneData.BackgroundBack.Large),
+                (ImageType.Backdrop, FirstImageUrl(sceneData.Background.Full, sceneData.Background.Large)),
+                (ImageType.Backdrop, FirstImageUrl(sceneData.BackgroundBack.Full, sceneData.BackgroundBack.Large)),
                 (ImageType.Logo, sceneData.Site.Logo),
             };
 
-            string primary = null;
-            switch (Plugin.Instance.Configuration.ScenesImage)
-            {
-                case ScenesImageStyle.Poster:
-                    primary = sceneData.Posters.Large;
-                    break;
-                case ScenesImageStyle.Background:
-                    primary = sceneData.Background.Large;
-                    break;
-            }
-
+            var primary = GetScenePrimaryImage(sceneData, style);
             if (!string.IsNullOrEmpty(primary))
             {
-                images.Insert(0, (ImageType.Primary, (string)primary));
+                images.Insert(0, (ImageType.Primary, primary));
             }
 
             foreach (var image in images)
             {
-                if (string.IsNullOrEmpty(image.Url))
+                if (string.IsNullOrWhiteSpace(image.Url))
                 {
                     continue;
                 }
@@ -527,6 +533,9 @@ namespace ThePornDB.Providers
 
             return result;
         }
+
+        private static string FirstImageUrl(params string[] urls)
+            => urls.FirstOrDefault(url => !string.IsNullOrWhiteSpace(url));
 
         private static RemoteImageInfo GetRemoteImageFromURL(string url)
         {
