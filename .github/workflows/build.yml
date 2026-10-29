@@ -1,0 +1,123 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Calculate build revision
+        id: version
+        env:
+          REVISION: ${{ github.run_number }}
+        run: |
+          version=$(python scripts/release.py version --revision "$REVISION")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test release metadata tooling
+        run: python -m unittest discover -s scripts -p 'test_*.py' -v
+      - name: Test plugin
+        run: dotnet test ThePornDB.Tests/ThePornDB.Tests.csproj --configuration Debug --logger "trx;LogFileName=tests.trx" --results-directory TestResults
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: TestResults
+          path: TestResults/*.trx
+          if-no-files-found: warn
+
+  build:
+    needs: version
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - configuration: Debug
+            framework: net10.0
+          - configuration: Debug.Emby
+            framework: netstandard2.1
+          - configuration: Release
+            framework: net10.0
+            archive: Jellyfin.Plugin.ThePornDB
+          - configuration: Release.Emby
+            framework: netstandard2.1
+            archive: Emby.Plugins.ThePornDB
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build plugin
+        env:
+          CONFIGURATION: ${{ matrix.configuration }}
+          REVISION: ${{ github.run_number }}
+        run: dotnet build Jellyfin.Plugin.ThePornDB/ThePornDB.csproj --configuration "$env:CONFIGURATION" "-p:RevisionNumber=$env:REVISION" --nologo
+      - name: Package release plugin
+        if: matrix.archive != ''
+        env:
+          CONFIGURATION: ${{ matrix.configuration }}
+          FRAMEWORK: ${{ matrix.framework }}
+          ARCHIVE: ${{ matrix.archive }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $output = "Jellyfin.Plugin.ThePornDB/bin/$env:CONFIGURATION/$env:FRAMEWORK"
+          $assembly = [System.Reflection.AssemblyName]::GetAssemblyName((Resolve-Path "$output/ThePornDB.dll"))
+          $fileVersion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo((Resolve-Path "$output/ThePornDB.dll")).FileVersion
+          if ($assembly.Version.ToString() -ne $env:VERSION -or $fileVersion -ne $env:VERSION) {
+            throw "Assembly/file versions do not match the release version $env:VERSION"
+          }
+          New-Item -ItemType Directory -Path package | Out-Null
+          Copy-Item "$output/ThePornDB.dll" "package/$env:ARCHIVE.dll"
+          Copy-Item "$output/ThePornDB.pdb" "package/$env:ARCHIVE.pdb"
+          Compress-Archive -Path "package/*" -DestinationPath "$env:ARCHIVE.zip"
+      - uses: actions/upload-artifact@v4
+        if: matrix.archive != ''
+        with:
+          name: ${{ matrix.archive }}
+          path: ${{ matrix.archive }}.zip
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: [version, test, build]
+    permissions:
+      contents: write
+    uses: ./.github/workflows/release.yml
+    with:
+      version: ${{ needs.version.outputs.version }}

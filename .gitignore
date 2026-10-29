@@ -1,3 +1,5 @@
 bin/
 obj/
 .vs/
+__pycache__/
+TestResults/
