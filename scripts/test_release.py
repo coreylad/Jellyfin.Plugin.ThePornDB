@@ -4,6 +4,7 @@ import tempfile
 import unittest
 import zipfile
 from pathlib import Path
+from xml.etree import ElementTree as ET
 
 from release import ROOT, build_version, create_manifest, validate_version
 
@@ -35,7 +36,10 @@ class ReleaseTests(unittest.TestCase):
             data = create_manifest(template, "1.6.1.42", "coreylad/Jellyfin.Plugin.ThePornDB", archive, "2026-10-29T00:00:00Z")
             latest = data[0]["versions"][0]
             self.assertEqual("1.6.1.42", latest["version"])
-            self.assertEqual("12.0.0.0", latest["targetAbi"])
+            controller_version = ET.parse(ROOT / "Jellyfin.Plugin.ThePornDB" / "ThePornDB.csproj").find(
+                ".//PackageReference[@Include='Jellyfin.Controller']"
+            ).attrib["Version"]
+            self.assertEqual(f"{controller_version}.0", latest["targetAbi"])
             self.assertEqual(hashlib.md5(archive.read_bytes()).hexdigest(), latest["checksum"])
             self.assertEqual("https://github.com/coreylad/Jellyfin.Plugin.ThePornDB/releases/download/v1.6.1.42/Jellyfin.Plugin.ThePornDB.zip", latest["sourceUrl"])
             self.assertEqual("2026-10-29T00:00:00Z", latest["timestamp"])
