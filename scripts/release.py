@@ -32,10 +32,12 @@ def validate_version(version):
         raise ValueError("Version components must not exceed 65534.")
 
 
-def create_manifest(template, version, repository, archive, timestamp=None):
+def create_manifest(template, version, repository, archive, timestamp=None, *, changelog):
     validate_version(version)
     if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9][A-Za-z0-9_.-]*", repository):
         raise ValueError("Expected repository in owner/name format.")
+    if not changelog.strip():
+        raise ValueError("Release notes must not be empty.")
     data = copy.deepcopy(template)
     if len(data) != 1 or data[0]["guid"] != "fb7580cf-576d-4991-8e56-0b4520c111d3":
         raise ValueError("Expected the ThePornDB plugin manifest.")
@@ -47,7 +49,11 @@ def create_manifest(template, version, repository, archive, timestamp=None):
         raise ValueError("Jellyfin.Controller must have a stable three-part version.")
     entry = {
         "version": version,
-        "changelog": f"Automated build {version}. See the GitHub release for changes.",
+        "changelog": (
+            f"ThePornDB {version}\n\n{changelog.strip()}\n\n"
+            f"Release details: https://github.com/{repository}/releases/tag/v{version}\n"
+            f"Requires Jellyfin {'.'.join(abi)} or newer. Restart Jellyfin after updating."
+        ),
         "targetAbi": ".".join(abi + ["0"]),
         "sourceUrl": f"https://github.com/{repository}/releases/download/v{version}/Jellyfin.Plugin.ThePornDB.zip",
         "checksum": checksum,
@@ -69,13 +75,17 @@ def main():
     manifest.add_argument("--version", required=True)
     manifest.add_argument("--repository", required=True)
     manifest.add_argument("--archive", type=Path, required=True)
+    manifest.add_argument("--changelog-file", type=Path, required=True)
     manifest.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     if args.command == "version":
         print(build_version(args.revision))
     else:
         template = json.loads((ROOT / "manifest.json").read_text(encoding="utf-8"))
-        data = create_manifest(template, args.version, args.repository, args.archive)
+        data = create_manifest(
+            template, args.version, args.repository, args.archive,
+            changelog=args.changelog_file.read_text(encoding="utf-8"),
+        )
         args.output.write_text(json.dumps(data, indent=4) + "\n", encoding="utf-8")
 
 
