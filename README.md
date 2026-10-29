@@ -10,10 +10,10 @@ This metadata provider helps fill Jellyfin/Emby with information for your adult 
 
 ## Install
 - Repository (Jellyfin only):
-  - Add to the list this URL `https://github.com/coreylad/Jellyfin.Plugin.ThePornDB/releases/latest/download/manifest.json`
-- Manual:
-  - Download Archive from [Latest Release](https://github.com/coreylad/Jellyfin.Plugin.ThePornDB/releases/latest)
-  - Follow the [Instruction](https://jellyfin.org/docs/general/server/plugins/index.html)
+  - Add to the list this URL `https://raw.githubusercontent.com/coreylad/Jellyfin.Plugin.ThePornDB/main/manifest.json`
+- Manual (Jellyfin):
+  - Download the **Jellyfin** artifact from the latest successful [Build workflow run on `main`](https://github.com/coreylad/Jellyfin.Plugin.ThePornDB/actions/workflows/release.yml).
+  - Extract the artifact and install the included `Jellyfin.Plugin.ThePornDB.zip` using the [Jellyfin plugin instructions](https://jellyfin.org/docs/general/server/plugins/index.html).
 
 ## Builds and automatic revisions
 

@@ -108,6 +108,21 @@ namespace ThePornDB.Helpers
             }
 
             ValidateSource(source);
+            var destinationStem = Path.GetFileNameWithoutExtension(destination);
+            var destinationHasCompanions = Directory.EnumerateFileSystemEntries(Path.GetDirectoryName(destination))
+                .Where(o => !string.Equals(o, source, StringComparison.OrdinalIgnoreCase))
+                .Any(o =>
+                {
+                    var entryName = Path.GetFileName(o);
+                    return string.Equals(entryName, fileName, StringComparison.OrdinalIgnoreCase)
+                        || entryName.StartsWith(destinationStem + ".", StringComparison.OrdinalIgnoreCase)
+                        || entryName.StartsWith(destinationStem + "-", StringComparison.OrdinalIgnoreCase);
+                });
+            if (destinationHasCompanions)
+            {
+                throw new IOException("Destination has an existing file or companions; rename the group with Namer instead.");
+            }
+
             File.Move(source, destination);
             try
             {
