@@ -30,6 +30,8 @@ namespace ThePornDB.Tests
         [InlineData("ExampleStudio.2024.01.16.A.Day.Outside", 100)]
         [InlineData("ExampleStudio.2024.01.15.Jane.Doe", 100)]
         [InlineData("ExampleStudio.2024.01.15.Jane.Doe.Alex.Smith", 100)]
+        [InlineData("[2024-01-15] A Day Outside", 100)]
+        [InlineData("ExampleStudio.2024.01.15.1080p.x264", 0)]
         [InlineData("A Day Outside", 100)]
         [InlineData("Outside A Day", 100)]
         [InlineData("OtherStudio.2024.01.15.A.Day.Outside", 0)]

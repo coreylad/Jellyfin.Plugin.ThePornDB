@@ -70,11 +70,14 @@ namespace ThePornDB.Helpers
             if (date.Success && date.Index > 0)
             {
                 var site = Normalize(input.Substring(0, date.Index)).Replace(" ", string.Empty);
-                var expectedSite = Normalize(scene.Site.Name).Replace(" ", string.Empty);
-                siteMatches = site.Length > 0 && expectedSite.StartsWith(site, StringComparison.OrdinalIgnoreCase);
-                if (!siteMatches)
+                if (site.Length > 0)
                 {
-                    return 0;
+                    var expectedSite = Normalize(scene.Site.Name).Replace(" ", string.Empty);
+                    siteMatches = expectedSite.StartsWith(site, StringComparison.OrdinalIgnoreCase);
+                    if (!siteMatches)
+                    {
+                        return 0;
+                    }
                 }
 
                 source = Normalize(input.Substring(date.Index + date.Length));
@@ -88,7 +91,7 @@ namespace ThePornDB.Helpers
             var overlap = sourceTokens.Count(o => titleTokens.Contains(o));
             var tokenScore = 200.0 * overlap / Math.Max(1, sourceTokens.Count + titleTokens.Count);
             var textScore = 0.0;
-            if (source.Length <= 512 && title.Length <= 512)
+            if (source.Length > 0 && source.Length <= 512 && title.Length <= 512)
             {
                 textScore = 100.0 * (1.0 - ((double)LevenshteinDistance.Calculate(source, title, StringComparison.OrdinalIgnoreCase) / Math.Max(source.Length, title.Length)));
             }

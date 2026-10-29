@@ -4,7 +4,7 @@ This metadata provider helps fill Jellyfin/Emby with information for your adult 
 
 [![GPL 2.0 License](https://img.shields.io/github/license/coreylad/Jellyfin.Plugin.ThePornDB)](./LICENSE)
 [![Current Release](https://img.shields.io/github/release/coreylad/Jellyfin.Plugin.ThePornDB)](https://github.com/coreylad/Jellyfin.Plugin.ThePornDB/releases/latest)
-[![Build status](https://img.shields.io/github/actions/workflow/status/coreylad/Jellyfin.Plugin.ThePornDB/build.yml)](https://github.com/coreylad/Jellyfin.Plugin.ThePornDB/actions/workflows/build.yml)
+[![Build status](https://img.shields.io/github/actions/workflow/status/coreylad/Jellyfin.Plugin.ThePornDB/release.yml)](https://github.com/coreylad/Jellyfin.Plugin.ThePornDB/actions/workflows/release.yml)
 
 ------------
 
@@ -12,8 +12,8 @@ This metadata provider helps fill Jellyfin/Emby with information for your adult 
 - Repository (Jellyfin only):
   - Add to the list this URL `https://github.com/coreylad/Jellyfin.Plugin.ThePornDB/releases/latest/download/manifest.json`
 - Manual:
-  - Download Archive from [Latest Release](https://github.com/coreylad/Jellyfin.Plugin.ThePornDB/releases/latest)
-  - Follow the [Instruction](https://jellyfin.org/docs/general/server/plugins/index.html)
+  - Download the archive from the [latest release](https://github.com/coreylad/Jellyfin.Plugin.ThePornDB/releases/latest)
+  - Follow the [Jellyfin plugin instructions](https://jellyfin.org/docs/general/server/plugins/index.html)
 
 ## Builds and automatic revisions
 
