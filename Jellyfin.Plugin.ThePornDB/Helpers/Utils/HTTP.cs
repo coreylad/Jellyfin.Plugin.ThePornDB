@@ -83,7 +83,7 @@ namespace ThePornDB.Helpers.Utils
             {
                 response = await Http.SendAsync(request, cancellationToken).ConfigureAwait(false);
             }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException))
             {
                 Logger.Error($"Request error: {e.Message}");
             }

@@ -12,6 +12,7 @@ using MediaBrowser.Model.Providers;
 using ThePornDB.Configuration;
 using ThePornDB.Helpers;
 using ThePornDB.Helpers.Utils;
+using ThePornDB.Models;
 
 namespace ThePornDB.Providers
 {
@@ -77,14 +78,15 @@ namespace ThePornDB.Providers
 
             var (prefixID, searchURL, sceneURL) = GetSettings(sceneType);
 
-            var curID = searchInfo.Name.GetAttributeValue("theporndbid") ?? searchInfo.Name.GetAttributeValue("TPDBID");
+            var curID = searchInfo.Name.GetAttributeValue("theporndbid") ?? searchInfo.Name.GetAttributeValue("TPDBID")
+                ?? searchInfo.Path.GetAttributeValue("theporndbid") ?? searchInfo.Path.GetAttributeValue("TPDBID");
             if (string.IsNullOrEmpty(curID))
             {
                 searchInfo.ProviderIds.TryGetValue(Plugin.Instance.Name, out curID);
             }
             else
             {
-                curID = prefixID + curID;
+                curID = curID.StartsWith(prefixID, StringComparison.OrdinalIgnoreCase) ? curID : prefixID + curID;
             }
 
             if (!string.IsNullOrEmpty(curID))
@@ -102,7 +104,7 @@ namespace ThePornDB.Providers
                 {
                     sceneData = await MetadataAPI.SceneUpdate(curID, cancellationToken).ConfigureAwait(false);
                 }
-                catch (Exception e)
+                catch (Exception e) when (!(e is OperationCanceledException))
                 {
                     Logger.Error($"Update error: \"{e}\"");
                 }
@@ -111,7 +113,7 @@ namespace ThePornDB.Providers
                 {
                     sceneImages = (List<RemoteImageInfo>)await MetadataAPI.SceneImages(curID, cancellationToken).ConfigureAwait(false);
                 }
-                catch (Exception e)
+                catch (Exception e) when (!(e is OperationCanceledException))
                 {
                     Logger.Error($"GetImages error: \"{e}\"");
                 }
@@ -130,7 +132,7 @@ namespace ThePornDB.Providers
                 }
             }
 
-            if (string.IsNullOrEmpty(searchInfo.Name))
+            if (string.IsNullOrEmpty(searchInfo.Name) && string.IsNullOrEmpty(searchInfo.Path))
             {
                 return result;
             }
@@ -150,10 +152,25 @@ namespace ThePornDB.Providers
 
             try
             {
-                result = await MetadataAPI.SceneSearch(searchTitle, oshash, searchInfo.Year, searchURL, prefixID, cancellationToken).ConfigureAwait(false);
+                if (Plugin.Instance.Configuration.UseEnhancedMatching)
+                {
+                    foreach (var query in SceneMatcher.Queries(searchInfo.Name, searchInfo.Path, Plugin.Instance.Configuration.UseFilePath))
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        result.AddRange(await MetadataAPI.SceneSearch(query, oshash, searchInfo.Year, searchURL, prefixID, cancellationToken).ConfigureAwait(false));
+                    }
+
+                    var source = SceneMatcher.MatchingTitle(searchInfo.Name, searchInfo.Path);
+                    result = SceneMatcher.Rank(result.Cast<MatchedSearchResult>(), source, searchInfo.Year);
+                }
+                else
+                {
+                    result = await MetadataAPI.SceneSearch(searchTitle, oshash, searchInfo.Year, searchURL, prefixID, cancellationToken).ConfigureAwait(false);
+                }
             }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException))
             {
+                result.Clear();
                 Logger.Error($"Search error: \"{e}\"");
             }
 
@@ -167,7 +184,7 @@ namespace ThePornDB.Providers
                     }
                 }
 
-                switch (Plugin.Instance.Configuration.OrderStyle)
+                switch (Plugin.Instance.Configuration.UseEnhancedMatching ? OrderStyle.Default : Plugin.Instance.Configuration.OrderStyle)
                 {
                     case OrderStyle.Default:
                         break;
@@ -204,10 +221,16 @@ namespace ThePornDB.Providers
             info.ProviderIds.TryGetValue(Plugin.Instance.Name, out var curID);
             if (string.IsNullOrEmpty(curID) && !Plugin.Instance.Configuration.DisableMediaAutoIdentify)
             {
-                var searchResults = await GetSearchResults(info, sceneType, cancellationToken).ConfigureAwait(false);
-                if (searchResults.Any())
+                var searchResults = (await GetSearchResults(info, sceneType, cancellationToken).ConfigureAwait(false)).ToList();
+                if (searchResults.Count > 0 && (!Plugin.Instance.Configuration.UseEnhancedMatching
+                    || !(searchResults[0] is MatchedSearchResult)
+                    || SceneMatcher.IsConfident(searchResults, Plugin.Instance.Configuration.MinimumMatchScore)))
                 {
                     searchResults.First().ProviderIds.TryGetValue(Plugin.Instance.Name, out curID);
+                }
+                else if (searchResults.Count > 0)
+                {
+                    Logger.Info("Automatic identification skipped: low-confidence or ambiguous ThePornDB results. Use Identify to choose a match.");
                 }
             }
 
@@ -221,7 +244,7 @@ namespace ThePornDB.Providers
             {
                 result = await MetadataAPI.SceneUpdate(curID, cancellationToken, Plugin.Instance.Configuration.AddCollectionOnSite).ConfigureAwait(false);
             }
-            catch (Exception e)
+            catch (Exception e) when (!(e is OperationCanceledException))
             {
                 Logger.Error($"Update error: \"{e}\"");
             }

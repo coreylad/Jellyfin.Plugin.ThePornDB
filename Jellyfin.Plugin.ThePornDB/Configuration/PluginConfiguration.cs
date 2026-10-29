@@ -74,6 +74,10 @@ namespace ThePornDB.Configuration
 
             this.UseFilePath = false;
             this.UseOSHash = false;
+            this.UseEnhancedMatching = false;
+            this.MinimumMatchScore = 85;
+            this.EnableAutoRename = false;
+            this.FileNameFormat = "{studio} - {release_date} - {title}";
 
             this.OrderStyle = OrderStyle.Default;
             this.TagStyle = TagStyle.Genre;
@@ -117,6 +121,14 @@ namespace ThePornDB.Configuration
         public bool UseFilePath { get; set; }
 
         public bool UseOSHash { get; set; }
+
+        public bool UseEnhancedMatching { get; set; }
+
+        public int MinimumMatchScore { get; set; }
+
+        public bool EnableAutoRename { get; set; }
+
+        public string FileNameFormat { get; set; }
 
         public OrderStyle OrderStyle { get; set; }
 
